@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import {
+  writeFileSync,
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -69,6 +70,42 @@ export class FileStorageService {
       unlinkSync(tempPath);
     }
 
+    return storagePath;
+  }
+
+  async persistUploadBuffer(input: {
+    buffer: Buffer;
+    fileName: string;
+    mimeType?: string;
+    folder?: string;
+  }) {
+    const folder = input.folder
+      ? `${this.prefix}/${input.folder}`
+      : this.prefix;
+    const storagePath = `${folder}/${input.fileName}`.replace(/\\/g, '/');
+
+    if (this.backend === 'gcs') {
+      if (!this.storage || !this.bucketName) {
+        throw new InternalServerErrorException(
+          'GCS storage backend is enabled but GCS_BUCKET_NAME is not configured.',
+        );
+      }
+
+      await this.storage
+        .bucket(this.bucketName)
+        .file(storagePath)
+        .save(input.buffer, {
+          metadata: {
+            contentType: input.mimeType ?? 'application/octet-stream',
+          },
+        });
+
+      return storagePath;
+    }
+
+    const finalPath = join(this.localRoot, storagePath);
+    mkdirSync(dirname(finalPath), { recursive: true });
+    writeFileSync(finalPath, input.buffer);
     return storagePath;
   }
 

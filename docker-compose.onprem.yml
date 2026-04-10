@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-patent_app}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-22022}:5432"
     volumes:
       - patent_manager_onprem_postgres:/var/lib/postgresql/data
 

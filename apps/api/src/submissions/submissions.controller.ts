@@ -6,10 +6,12 @@ import {
   Param,
   Patch,
   Post,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 
-import type { FileAttachment } from '../domain/models';
 import {
   CreateSubmissionDraftDto,
   GenerateSubmissionFormSnapshotDto,
@@ -66,21 +68,33 @@ export class SubmissionsController {
   }
 
   @Post(':id/attachments')
+  @UseInterceptors(FileInterceptor('file'))
   attachment(
     @Headers('x-user-id') actorUserId = 'user-inventor',
     @Param('id') id: string,
+    @UploadedFile()
+    file?: {
+      buffer: Buffer;
+      originalname: string;
+      mimetype: string;
+      size: number;
+    },
     @Body()
-    payload: FileAttachment & {
+    payload: {
+      originalName?: string;
+      type?: string;
       attachmentType?: string;
       mimeType?: string;
       filePath?: string;
-    },
+    } = {},
   ) {
     return this.submissionsService.addAttachment(actorUserId, id, {
-      attachmentType: payload.attachmentType ?? payload.type,
-      originalName: payload.originalName,
-      mimeType: payload.mimeType,
+      attachmentType: payload.attachmentType ?? payload.type ?? '',
+      originalName: file?.originalname ?? payload.originalName ?? '',
+      mimeType: file?.mimetype ?? payload.mimeType,
       filePath: payload.filePath,
+      buffer: file?.buffer,
+      size: file?.size,
     });
   }
 

@@ -2,8 +2,7 @@
 
 import type { SessionUser } from "./types";
 
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 const SESSION_KEY = "patent-manager-session";
 
 export function documentDownloadUrl(
@@ -36,13 +35,15 @@ export async function apiFetch<T>(
   userId?: string,
 ): Promise<T> {
   const session = readSession();
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
       ...(session?.id || userId
         ? { "x-user-id": userId ?? session?.id ?? "" }
         : {}),
+      ...(!isFormData ? { "Content-Type": "application/json" } : {}),
       ...(options.headers ?? {}),
     },
     cache: "no-store",

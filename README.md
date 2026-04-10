@@ -24,6 +24,7 @@
 
 - Web: `22021`
 - API: `22020`
+- Postgres(on-prem profile): `22022`
 
 실행 순서:
 
@@ -105,6 +106,15 @@ On-prem 프로파일은 내부망 서버 기준 `web + api + postgres`를 기본
 cp .env.onprem.example .env.onprem
 docker compose --env-file .env.onprem -f docker-compose.onprem.yml up -d --build
 ```
+
+포트 규칙:
+
+- `22020`: API
+- `22021`: Web
+- `22022`: Postgres
+
+현재 이 PC에서는 로컬 개발 서버와의 충돌을 피하려고 실제 `.env.onprem` 값을
+`23020`, `23021`, `23022`로 잡아둔 상태입니다.
 
 보조 스크립트:
 

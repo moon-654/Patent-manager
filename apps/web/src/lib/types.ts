@@ -436,3 +436,21 @@ export interface Notification {
   status: string;
   sentAt?: string;
 }
+
+export interface DraftAttachmentUploadStatus {
+  key: string;
+  label: string;
+  attachmentType: string;
+  uploaded: boolean;
+  fileName: string;
+  uploadStatus: "idle" | "uploading" | "uploaded" | "error";
+  error?: string;
+}
+
+export interface SubmissionDraftEditorState {
+  draftId?: string;
+  isDirty: boolean;
+  isAutosaving: boolean;
+  lastSavedAt?: string;
+  uploads: DraftAttachmentUploadStatus[];
+}

@@ -13,6 +13,7 @@ import type {
 import { AccessControlService } from '../common/access-control.service';
 import { AuditService } from '../common/audit.service';
 import { DocumentService } from '../common/document.service';
+import { FileStorageService } from '../common/file-storage.service';
 import { NotificationsService } from '../common/notifications.service';
 import { PrismaService } from '../common/prisma.service';
 import type {
@@ -70,6 +71,7 @@ export class SubmissionsService {
     private readonly audit: AuditService,
     private readonly notifications: NotificationsService,
     private readonly documents: DocumentService,
+    private readonly fileStorage: FileStorageService,
   ) {}
 
   private formData(value: Prisma.JsonValue) {
@@ -832,6 +834,8 @@ export class SubmissionsService {
       originalName: string;
       mimeType?: string;
       filePath?: string;
+      buffer?: Buffer;
+      size?: number;
     },
   ) {
     const submission = await this.findSubmission(id);
@@ -841,11 +845,30 @@ export class SubmissionsService {
         '첨부는 초안 또는 보완 요청 상태에서만 추가할 수 있습니다.',
       );
     }
+    if (!attachment.attachmentType) {
+      throw new BadRequestException('첨부 유형은 필수입니다.');
+    }
+    if (!attachment.originalName) {
+      throw new BadRequestException('파일명은 필수입니다.');
+    }
 
     const versionNo =
       submission.attachments.filter(
         (item) => item.attachmentType === attachment.attachmentType,
       ).length + 1;
+
+    const filePath = attachment.buffer
+      ? await this.fileStorage.persistUploadBuffer({
+          buffer: attachment.buffer,
+          fileName:
+            `${attachment.attachmentType}-${submission.currentRevisionNo}-${Date.now()}-${attachment.originalName}`.replace(
+              /\s+/g,
+              '-',
+            ),
+          mimeType: attachment.mimeType,
+          folder: `submissions/${id}/attachments`,
+        })
+      : attachment.filePath;
 
     return this.prisma.submissionAttachment.create({
       data: {
@@ -854,7 +877,7 @@ export class SubmissionsService {
         attachmentType: attachment.attachmentType,
         originalName: attachment.originalName,
         mimeType: attachment.mimeType,
-        filePath: attachment.filePath,
+        filePath,
         uploadedBy: actorUserId,
         versionNo,
       },
