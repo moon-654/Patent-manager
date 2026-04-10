@@ -1,24 +1,23 @@
-# 직무발명 통합 관리 시스템 MVP
+# Patent Manager
 
-문서 중심으로 정리되어 있던 직무발명 관리 요구사항을 실행 가능한 코드베이스로 옮긴 모노레포입니다.
+직무발명 신고, 심의/평가, 특허, 보상, 정책 관리를 위한 monorepo입니다.
 
-## 구성
+## Structure
 
-- `apps/api`: NestJS 기반 API, Swagger 문서, 인메모리 MVP 워크플로우 서비스, Prisma 스키마
-- `apps/web`: Next.js 기반 PC 웹 UI
-- `prisma`: 관계형 데이터 모델 초안
-- `docs/plans`: 설계 및 구현 문서
+- `apps/api`: NestJS API
+- `apps/web`: Next.js web app
+- `prisma`: Prisma schema
+- `deploy/gcp`: Cloud Run deployment examples
+- `docs`: 운영 및 설계 문서
 
-## 포트 규칙
+## Local Development
 
-이 앱은 `Research Lab` 범주의 앱 번호 `02`를 사용합니다.
+기본 로컬 포트:
 
-- Backend API: `22020`
-- Frontend UI: `22021`
+- Web: `22021`
+- API: `22020`
 
-공통 기본 포트인 `3000`, `4000`, `8000`, `8080`을 이 프로젝트의 체크인된 실행 스크립트에서 사용하지 않습니다.
-
-## 빠른 시작
+실행 순서:
 
 ```bash
 cp .env.example .env
@@ -28,14 +27,56 @@ npm run prisma:generate
 npm run dev
 ```
 
-## 기본 접속
+기본 접속 주소:
 
-- 웹: `http://localhost:22021`
+- Web: `http://localhost:22021`
 - API: `http://localhost:22020/api/v1`
 - Swagger: `http://localhost:22020/api/docs`
 
-## 개발 메모
+## Production Deployment
 
-- MVP는 문서의 1차 구현 범위를 기준으로 `신고 -> 심의 -> 특허 -> 보상 -> 정책` 흐름을 우선 구현합니다.
-- API는 데모 가능한 워크플로우를 위해 인메모리 상태 저장을 사용하고, Prisma 스키마로 영속 모델을 함께 정의합니다.
-- 로컬 로그인은 시드 사용자 선택 기반으로 동작합니다.
+현재 운영 배포 구조:
+
+- Web service: `patent-manager`
+- API service: `patent-manager-api`
+- Database: Cloud SQL for PostgreSQL
+- Document storage: Cloud Storage
+- Secret storage: Secret Manager
+
+운영 URL:
+
+- Web: `https://patent-manager-k6y2romega-du.a.run.app`
+- API: `https://patent-manager-api-k6y2romega-du.a.run.app`
+
+추가 배포 메모는 [gcp-cloud-run-deployment.md](c:/Users/Lenovo/Documents/Workspace/Patent_manager/docs/gcp-cloud-run-deployment.md)에 정리되어 있습니다.
+
+## GitHub Auto Deploy
+
+GitHub push 기반 Cloud Build 트리거는 두 개로 분리되어 있습니다.
+
+- `patent-manager-web-main`
+  - build config: `cloudbuild.yaml`
+  - 대상: `apps/web/**`, `apps/web/Dockerfile`, `cloudbuild.yaml`, 루트 `package*.json`, `.dockerignore`
+  - 결과: Cloud Run web service `patent-manager`
+
+- `patent-manager-api-main`
+  - build config: `cloudbuild-api.yaml`
+  - 대상: `apps/api/**`, `prisma/**`, `apps/api/Dockerfile`, `cloudbuild-api.yaml`, 루트 `package*.json`, `.dockerignore`
+  - 결과: Cloud Run API service `patent-manager-api`
+
+즉:
+
+- 웹 변경 푸시 -> 웹만 배포
+- API 또는 Prisma 변경 푸시 -> API만 배포
+
+## Current Status
+
+- Web service is serving successfully.
+- API service is serving successfully and connected to Cloud SQL.
+- Web app proxies API requests to the API Cloud Run service.
+
+## Next Recommendations
+
+- 운영용 인증 도입
+- 초기 시드 데이터/관리자 계정 정리
+- 커스텀 도메인 연결
