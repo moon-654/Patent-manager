@@ -1,7 +1,20 @@
 import type { NextConfig } from "next";
 
+const apiProxyTarget = process.env.API_PROXY_TARGET;
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  async rewrites() {
+    if (!apiProxyTarget) {
+      return [];
+    }
+
+    return [
+      {
+        source: "/api/v1/:path*",
+        destination: `${apiProxyTarget}/api/v1/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
