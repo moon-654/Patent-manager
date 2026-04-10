@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: patent-manager-onprem-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-patent_manager}
+      POSTGRES_USER: ${POSTGRES_USER:-patent_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "5432:5432"
+    volumes:
+      - patent_manager_onprem_postgres:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: patent-manager-onprem-api
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      API_PORT: 8080
+      DATABASE_URL: ${DATABASE_URL:-postgresql://patent_app:change-me@postgres:5432/patent_manager?schema=public}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      STORAGE_PREFIX: ${STORAGE_PREFIX:-generated-docs}
+      GCS_BUCKET_NAME: ${GCS_BUCKET_NAME:-}
+      PDF_FONT_PATH: ${PDF_FONT_PATH:-}
+    ports:
+      - "${API_PORT:-22020}:8080"
+    volumes:
+      - patent_manager_onprem_documents:/app/apps/api/tmp
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        API_PROXY_TARGET: ${API_PROXY_TARGET:-http://api:8080}
+    container_name: patent-manager-onprem-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api/v1}
+      API_PROXY_TARGET: ${API_PROXY_TARGET:-http://api:8080}
+    ports:
+      - "${WEB_PORT:-22021}:8080"
+
+volumes:
+  patent_manager_onprem_postgres:
+  patent_manager_onprem_documents:

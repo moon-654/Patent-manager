@@ -11,13 +11,17 @@
     "dev": "concurrently \"npm run dev --workspace api\" \"npm run dev --workspace web\"",
     "dev:api": "npm run dev --workspace api",
     "dev:web": "npm run dev --workspace web",
+    "dev:infra": "docker compose up -d",
     "build": "npm run build --workspace api && npm run build --workspace web",
     "lint": "npm run lint --workspace api && npm run lint --workspace web",
     "test": "npm run test --workspace api",
     "test:e2e": "npm run test:e2e --workspace api",
     "prisma:generate": "prisma generate",
     "prisma:format": "prisma format",
-    "seed": "npm run seed --workspace api"
+    "seed": "npm run seed --workspace api",
+    "onprem:up": "docker compose --env-file .env.onprem -f docker-compose.onprem.yml up -d --build",
+    "onprem:down": "docker compose --env-file .env.onprem -f docker-compose.onprem.yml down",
+    "onprem:logs": "docker compose --env-file .env.onprem -f docker-compose.onprem.yml logs -f"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

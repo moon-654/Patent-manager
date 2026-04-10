@@ -7,7 +7,6 @@ import {
   unlinkSync,
 } from 'fs';
 import { dirname, join } from 'path';
-
 import { Storage } from '@google-cloud/storage';
 
 @Injectable()
@@ -64,10 +63,12 @@ export class FileStorageService {
 
     const finalPath = join(this.localRoot, storagePath);
     mkdirSync(dirname(finalPath), { recursive: true });
+
     if (tempPath !== finalPath) {
       copyFileSync(tempPath, finalPath);
       unlinkSync(tempPath);
     }
+
     return storagePath;
   }
 
