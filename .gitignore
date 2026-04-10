@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+.next/
+.turbo/
+.env
+.env.local
+.DS_Store
+apps/*/node_modules/
+apps/*/dist/
+apps/*/.next/
+apps/web/.git/
+prisma/generated/
+npm-debug.log*
+tmp/
+.codex/

@@ -1,0 +1,283 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  INTAKE_REVIEW
+  RETURNED
+  COMMITTEE_REVIEW
+  ACCEPTED
+  REJECTED
+  HOLD
+}
+
+enum DecisionType {
+  ACCEPT
+  REJECT
+  HOLD
+}
+
+enum EvaluationStatus {
+  DRAFT
+  FINALIZED
+}
+
+enum MeetingMinuteStatus {
+  DRAFT
+  APPROVED
+}
+
+enum PolicyStatus {
+  DRAFT
+  APPROVAL_WAITING
+  SCHEDULED
+  ACTIVE
+  EXPIRED
+}
+
+model PolicyVersion {
+  id                 String                     @id @default(cuid())
+  versionCode        String                     @unique
+  name               String
+  status             PolicyStatus               @default(DRAFT)
+  effectiveDate      DateTime
+  noticeDate         DateTime?
+  createdBy          String
+  approvedBy         String?
+  isDisadvantageous  Boolean                    @default(false)
+  changeSummary      String?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  grades             PolicyScoreGrade[]
+  evaluationCriteria PolicyEvaluationCriterion[]
+}
+
+model PolicyScoreGrade {
+  id              String        @id @default(cuid())
+  policyVersionId String
+  gradeCode       String
+  gradeName       String
+  minScore        Decimal       @db.Decimal(6, 2)
+  maxScore        Decimal       @db.Decimal(6, 2)
+  displayOrder    Int           @default(0)
+  policyVersion   PolicyVersion @relation(fields: [policyVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([policyVersionId, gradeCode])
+}
+
+model PolicyEvaluationCriterion {
+  id              String                 @id @default(cuid())
+  policyVersionId String
+  criterionCode   String
+  criterionName   String
+  maxScore        Decimal                @db.Decimal(6, 2)
+  displayOrder    Int                    @default(0)
+  isActive        Boolean                @default(true)
+  policyVersion   PolicyVersion          @relation(fields: [policyVersionId], references: [id], onDelete: Cascade)
+  levels          PolicyEvaluationLevel[]
+
+  @@unique([policyVersionId, criterionCode])
+}
+
+model PolicyEvaluationLevel {
+  id           String                    @id @default(cuid())
+  criterionId  String
+  levelCode    String
+  levelName    String
+  mappedScore  Decimal                   @db.Decimal(6, 2)
+  displayOrder Int                       @default(0)
+  criterion    PolicyEvaluationCriterion @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+
+  @@unique([criterionId, levelCode])
+}
+
+model InventionSubmission {
+  id                String                  @id @default(cuid())
+  submissionNo      String                  @unique
+  title             String
+  submitterUserId   String
+  summary           String
+  businessUnit      String?
+  status            SubmissionStatus        @default(DRAFT)
+  formDataJson      Json
+  currentRevisionNo Int                     @default(1)
+  decisionDueAt     DateTime?
+  submittedAt       DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  inventorShares    SubmissionInventorShare[]
+  attachments       SubmissionAttachment[]
+  revisions         SubmissionRevision[]
+  workflowEvents    SubmissionWorkflowEvent[]
+  checklists        SubmissionChecklist[]
+  decisions         SuccessionDecision[]
+  evaluations       Evaluation[]
+
+  @@index([submitterUserId])
+  @@index([status])
+}
+
+model SubmissionInventorShare {
+  id                           String              @id @default(cuid())
+  submissionId                 String
+  userId                       String?
+  inventorName                 String
+  inventorNameEn               String?
+  shareRatio                   Decimal             @db.Decimal(5, 2)
+  isPrimary                    Boolean             @default(false)
+  department                   String?
+  phoneNumber                  String?
+  residentRegistrationNumber   String?
+  address                      String?
+  submission                   InventionSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+}
+
+model SubmissionAttachment {
+  id            String              @id @default(cuid())
+  submissionId  String
+  revisionNo    Int?
+  attachmentType String
+  originalName  String
+  mimeType      String?
+  filePath      String?
+  uploadedBy    String
+  uploadedAt    DateTime            @default(now())
+  versionNo     Int                 @default(1)
+  submission    InventionSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId, attachmentType])
+}
+
+model SubmissionRevision {
+  id           String              @id @default(cuid())
+  submissionId String
+  revisionNo   Int
+  title        String
+  summary      String
+  changeNote   String?
+  formDataJson Json
+  createdBy    String
+  createdAt    DateTime            @default(now())
+  submission   InventionSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, revisionNo])
+}
+
+model SubmissionWorkflowEvent {
+  id           String              @id @default(cuid())
+  submissionId String
+  eventType    String
+  fromStatus   SubmissionStatus?
+  toStatus     SubmissionStatus?
+  actorUserId  String
+  actorName    String?
+  note         String?
+  payloadJson  Json?
+  createdAt    DateTime            @default(now())
+  submission   InventionSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId, createdAt])
+}
+
+model SubmissionChecklist {
+  id           String              @id @default(cuid())
+  submissionId String
+  revisionNo   Int
+  checkedBy    String?
+  checkedAt    DateTime?
+  allPassed    Boolean             @default(false)
+  itemsJson    Json
+  submission   InventionSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, revisionNo])
+}
+
+model SuccessionDecision {
+  id             String              @id @default(cuid())
+  submissionId   String
+  decisionType   DecisionType
+  decidedBy      String
+  decidedAt      DateTime            @default(now())
+  dueDate        DateTime
+  reason         String
+  noticeDocumentId String?
+  submission     InventionSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+}
+
+model FormSnapshot {
+  id            String   @id @default(cuid())
+  formCode      String
+  targetType    String
+  targetId      String
+  revisionNo    Int?
+  title         String
+  generatedBy   String
+  generatedAt   DateTime @default(now())
+  fileName      String
+  filePath      String
+  previewLinesJson Json
+
+  @@index([targetType, targetId])
+}
+
+model Evaluation {
+  id                String              @id @default(cuid())
+  targetType        String
+  targetId          String
+  submissionId      String?
+  policyVersionId   String
+  policyVersionCode String
+  evaluationRound   Int                 @default(1)
+  status            EvaluationStatus    @default(DRAFT)
+  totalScore        Decimal             @default(0) @db.Decimal(6, 2)
+  gradeCode         String?
+  evaluatorUserId   String
+  finalizedAt       DateTime?
+  duplicateOf       String?
+  isLocked          Boolean             @default(false)
+  policySnapshot    Json
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  submission        InventionSubmission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  items             EvaluationItem[]
+
+  @@unique([targetType, targetId, policyVersionId, evaluationRound])
+  @@index([submissionId])
+}
+
+model EvaluationItem {
+  id                String     @id @default(cuid())
+  evaluationId      String
+  criterionCode     String
+  criterionName     String
+  selectedLevelCode String
+  selectedLevelName String
+  selectedScore     Decimal    @db.Decimal(6, 2)
+  comment           String?
+  evaluation        Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+}
+
+model MeetingMinute {
+  id                    String              @id @default(cuid())
+  title                 String
+  meetingDate           DateTime
+  status                MeetingMinuteStatus @default(DRAFT)
+  retentionUntil        DateTime
+  createdBy             String
+  approvedBy            String?
+  approvedAt            DateTime?
+  attendeesJson         Json
+  agendaJson            Json
+  resolution            String
+  linkedSubmissionIdsJson Json
+  linkedEvaluationIdsJson Json
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+}

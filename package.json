@@ -1,0 +1,27 @@
+{
+  "name": "patent-manager-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MVP monorepo for the 직무발명 통합 관리 시스템",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace api\" \"npm run dev --workspace web\"",
+    "dev:api": "npm run dev --workspace api",
+    "dev:web": "npm run dev --workspace web",
+    "build": "npm run build --workspace api && npm run build --workspace web",
+    "lint": "npm run lint --workspace api && npm run lint --workspace web",
+    "test": "npm run test --workspace api",
+    "test:e2e": "npm run test:e2e --workspace api",
+    "prisma:generate": "prisma generate",
+    "prisma:format": "prisma format",
+    "seed": "npm run seed --workspace api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "prisma": "^6.7.0"
+  }
+}

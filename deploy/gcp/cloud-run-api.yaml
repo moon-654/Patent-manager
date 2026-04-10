@@ -1,0 +1,38 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: patent-manager-api
+spec:
+  template:
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      serviceAccountName: patent-manager-runtime
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/patent-manager/api:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "8080"
+            - name: API_PORT
+              value: "8080"
+            - name: STORAGE_BACKEND
+              value: gcs
+            - name: STORAGE_PREFIX
+              value: generated-docs
+            - name: GCS_BUCKET_NAME
+              value: patent-manager-documents
+            - name: PDF_FONT_PATH
+              value: /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: patent-manager-database-url
+                  key: latest
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
