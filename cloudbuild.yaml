@@ -1,0 +1,68 @@
+substitutions:
+  _AR_HOSTNAME: asia-northeast3-docker.pkg.dev
+  _AR_PROJECT_ID: akc-patent-manager
+  _AR_REPOSITORY: cloud-run-source-deploy
+  _DEPLOY_REGION: asia-northeast3
+  _PLATFORM: managed
+  _SERVICE_NAME: patent-manager
+  _TRIGGER_ID: 709bca9e-7415-4aa6-9c6e-80a7ac949d99
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  substitutionOption: ALLOW_LOOSE
+  machineType: E2_HIGHCPU_8
+
+steps:
+  - id: Pull cache
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args:
+      - -c
+      - >
+        docker pull
+        ${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/patent-manager/${_SERVICE_NAME}:latest
+        || exit 0
+
+  - id: Build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --cache-from
+      - ${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/patent-manager/${_SERVICE_NAME}:latest
+      - -t
+      - ${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/patent-manager/${_SERVICE_NAME}:${COMMIT_SHA}
+      - -t
+      - ${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/patent-manager/${_SERVICE_NAME}:latest
+      - .
+      - -f
+      - Dockerfile
+
+  - id: Push commit image
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/patent-manager/${_SERVICE_NAME}:${COMMIT_SHA}
+
+  - id: Push latest image
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/patent-manager/${_SERVICE_NAME}:latest
+
+  - id: Deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - services
+      - update
+      - ${_SERVICE_NAME}
+      - --platform=${_PLATFORM}
+      - --image=${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/patent-manager/${_SERVICE_NAME}:${COMMIT_SHA}
+      - --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=${COMMIT_SHA},gcb-build-id=${BUILD_ID},gcb-trigger-id=${_TRIGGER_ID}
+      - --region=${_DEPLOY_REGION}
+      - --quiet
+
+images:
+  - ${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/patent-manager/${_SERVICE_NAME}:${COMMIT_SHA}
+  - ${_AR_HOSTNAME}/${_AR_PROJECT_ID}/${_AR_REPOSITORY}/patent-manager/${_SERVICE_NAME}:latest
